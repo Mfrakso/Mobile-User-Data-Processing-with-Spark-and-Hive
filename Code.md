@@ -142,3 +142,45 @@ def save_to_hbase(row):
     connection = happybase.Connection('localhost')
     table = connection.table('my_mobile')  
     table.put(row_key, data)
+
+--------------------------------------------------------------------------
+ Machine Learning Model (Linear Regression)
+ from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.regression import LinearRegression
+
+mobile_df = mobile_df.na.drop()  # Drop rows with null values
+
+assembler = VectorAssembler(
+    inputCols=["screen_time", "app_usage", "battery_drain", "apps_installed"], 
+    outputCol="features", 
+    handleInvalid="skip"
+)
+
+assembled_df = assembler.transform(mobile_df).select("features", "screen_time")
+
+train_data, test_data = assembled_df.randomSplit([0.7, 0.3])
+
+lr = LinearRegression(labelCol="screen_time")
+lr_model = lr.fit(train_data)
+
+--------------------------------------------------------------------------
+def to_hbase_format(row):
+    return (row.user_id, {
+        'cf:device_model': str(row.device_model),
+        'cf:operating_system': str(row.operating_system),
+        'cf:app_usage': str(row.app_usage),
+        'cf:screen_time': str(row.screen_time),
+        'cf:battery_drain': str(row.battery_drain),
+        'cf:apps_installed': str(row.apps_installed),
+        'cf:data_usage': str(row.data_usage),
+        'cf:age': str(row.age),
+        'cf:gender': str(row.gender),
+        'cf:user_behavior': str(row.user_behavior)
+    })
+
+def save_to_hbase(row):
+    row_key, data = row
+    connection = happybase.Connection('localhost')
+    table = connection.table('my_mobile')
+    table.put(row_key, data)
+    
